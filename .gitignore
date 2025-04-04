@@ -1,0 +1,30 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# === VS Code ===
+.vscode/
+
+# === Logs ===
+*.log
+
+# === Windows system files ===
+desktop.ini
+Thumbs.db
+
+# === Python notebook auto-saves ===
+.ipynb_checkpoints/
+
+# === Other cache/temp files ===
+*.tmp
+*.bak
+*.swp
