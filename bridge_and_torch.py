@@ -20,6 +20,7 @@ def is_goal(state):
     DL, DR, pos, time_elapsed = state
     return DR == ALL
 
+
 def get_next_states(state):
     """Generate all legal next states from the current state."""
     DL, DR, pos, time_elapsed = state
@@ -63,6 +64,7 @@ def get_next_states(state):
 
     return next_states
 
+
 def print_solution(path, title="Solution"):
     """Print the solution path with optional title, formatted for clarity."""
     print(f"\n=== {title} Found ===")
@@ -83,28 +85,70 @@ def print_solution(path, title="Solution"):
         print(f"Step {i}: [{move_str}] {direction} ({step_time} min)")
     print(f"\n✅ Optimal total time to cross: {total_time} minutes")
 
+
 def bfs():
-    """Perform Breadth-First Search to find the shortest sequence of moves."""
+    """Perform Breadth-First Search to find the shortest sequence of moves.
+    BFS does not consider different edge weights (times), so it does not guarantee the optimal time solution.
+    """
     start_state = (frozenset(ALL), frozenset(), 'L', 0)
     queue = deque()
     queue.append((start_state, []))
     visited = set()
     visited.add((start_state[0], start_state[1], start_state[2]))
 
-    
     while queue:
         current_state, path = queue.popleft()
         if is_goal(current_state):
-            return path + [current_state] # Return the path to the goal state
+            return path + [current_state]  # Return the path to the goal state
 
         for next_state in get_next_states(current_state):
             state_id = (frozenset(next_state[0]), frozenset(next_state[1]), next_state[2])
             if state_id not in visited:
                 visited.add(state_id)
-                queue.append((next_state, path + [current_state])) 
+                queue.append((next_state, path + [current_state]))
 
     return None  # No solution found
-# BFS not optimal, but finds a solution
+
+
+def dfs_limited(state, limit, path, visited):
+    """Limited-depth DFS helper."""
+    if is_goal(state):
+        return path + [state]
+
+    if limit == 0:
+        return None
+
+    state_id = (frozenset(state[0]), frozenset(state[1]), state[2])
+    if state_id in visited:
+        return None
+    visited.add(state_id)
+
+    for next_state in get_next_states(state):
+        result = dfs_limited(next_state, limit - 1, path + [state], visited.copy())
+        if result:
+            return result
+
+    return None
+
+
+def dfs_iterative_deepening(max_depth=100):
+    """
+    Iterative Deepening DFS (IDDFS).
+    Tries increasing depth limits until it finds a solution or reaches max_depth.
+    """
+    start_state = (frozenset(ALL), frozenset(), 'L', 0)
+
+    for depth in range(1, max_depth + 1):
+        print(f"🔎 Trying depth limit: {depth}")
+        visited = set()
+        result = dfs_limited(start_state, depth, [], visited)
+        if result:
+            print(f"\n✅ Solution found at depth {depth}")
+            return result
+
+    print("❌ No solution found within depth limit.")
+    return None
+
 
 def ucs():
     """Perform Uniform Cost Search to find the minimum time crossing sequence."""
@@ -127,8 +171,7 @@ def ucs():
                 visited[state_id] = next_time
                 queue.put((next_time, next_state, path + [current_state]))
 
-    return None # No solution found
-# UCS finds the optimal solution
+    return None  # No solution found
 
 
 def visualize_solution_path(solution):
@@ -148,10 +191,20 @@ def visualize_solution_path(solution):
     plt.title("Bridge & Torch – Optimal UCS Path", fontsize=14)
     plt.show()
 
-# === Run UCS ===
-solution1 = ucs()
-if solution1:
-    print_solution(solution1, title="UCS Solution")
-    visualize_solution_path(solution1)
+
+# # === Run UCS ===
+# solution1 = ucs()
+# if solution1:
+#     print_solution(solution1, title="UCS Solution")
+#     visualize_solution_path(solution1)
+# else:
+#     print("❌ No solution found.")
+
+
+#=== Optional: Run DFS Iterative Deepening ===
+solution_dfs = dfs_iterative_deepening()
+if solution_dfs:
+    print_solution(solution_dfs, title="DFS Iterative Deepening Solution")
+    visualize_solution_path(solution_dfs)
 else:
     print("❌ No solution found.")
