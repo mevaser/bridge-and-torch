@@ -14,6 +14,7 @@ DL = {'P1', 'P2', 'P5', 'P10', 'P15'}  # Everyone starts on the left
 DR = set()  # Right side is initially empty
 state = (DL, DR, flashlight_position, total_time)  # Full state representation
 
+
 def is_goal(state):
     """Check if the goal state is reached: everyone has crossed to the right side."""
     DL, DR, pos, time_elapsed = state
@@ -30,7 +31,7 @@ def get_next_states(state):
             for person_b in DL:
                 if person_a != person_b:
                     new_DL = DL - {person_a, person_b}
-                    new_DR = DR | {person_a, person_b}
+                    new_DR = DR | {person_a, person_b} 
                     crossing_time = max(PEOPLE[person_a], PEOPLE[person_b])
                     new_state = (new_DL, new_DR, 'R', time_elapsed + crossing_time)
                     next_states.append(new_state)
@@ -66,6 +67,7 @@ def print_solution(path, title="Solution"):
     """Print the solution path with optional title, formatted for clarity."""
     print(f"\n=== {title} Found ===")
     total_time = path[-1][3] if path else 0
+
     for i in range(1, len(path)):
         prev, curr = path[i - 1], path[i]
         prev_DL, prev_DR, prev_pos, prev_time = prev
@@ -89,18 +91,20 @@ def bfs():
     visited = set()
     visited.add((start_state[0], start_state[1], start_state[2]))
 
+    
     while queue:
         current_state, path = queue.popleft()
         if is_goal(current_state):
-            return path + [current_state]
+            return path + [current_state] # Return the path to the goal state
 
         for next_state in get_next_states(current_state):
             state_id = (frozenset(next_state[0]), frozenset(next_state[1]), next_state[2])
             if state_id not in visited:
                 visited.add(state_id)
-                queue.append((next_state, path + [current_state]))
+                queue.append((next_state, path + [current_state])) 
 
     return None  # No solution found
+# BFS not optimal, but finds a solution
 
 def ucs():
     """Perform Uniform Cost Search to find the minimum time crossing sequence."""
@@ -123,9 +127,12 @@ def ucs():
                 visited[state_id] = next_time
                 queue.put((next_time, next_state, path + [current_state]))
 
-    return None
+    return None # No solution found
+# UCS finds the optimal solution
+
 
 def visualize_solution_path(solution):
+    """Visualize the solution path using NetworkX and Matplotlib."""
     G = nx.DiGraph()
     for i in range(len(solution) - 1):
         curr = f"S{i}\n{sorted(solution[i][0])} → {sorted(solution[i][1])}\n{solution[i][3]}m"
@@ -139,7 +146,6 @@ def visualize_solution_path(solution):
     edge_labels = nx.get_edge_attributes(G, 'label')
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9)
     plt.title("Bridge & Torch – Optimal UCS Path", fontsize=14)
-    plt.tight_layout()
     plt.show()
 
 # === Run UCS ===
