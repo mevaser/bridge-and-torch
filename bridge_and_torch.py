@@ -1,4 +1,5 @@
 from collections import deque
+from queue import PriorityQueue
 
 
 PEOPLE = {'P1': 1, 'P2': 2, 'P5': 5, 'P10': 10, 'P15': 15} # Dictionary of people and their crossing times
@@ -102,10 +103,46 @@ def bfs():
                 queue.append((next_state, path + [current_state]))
     return None
 
+from queue import PriorityQueue
+
+def ucs():
+    """Perform Uniform Cost Search (UCS) to find the path with the lowest total crossing time."""
+
+    # Initial state: all people on the left, right side empty, flashlight on the left, time = 0
+    start_state = (frozenset(ALL), frozenset(), 'L', 0)
+
+    # Priority queue holds (total_time, state, path)
+    queue = PriorityQueue()
+    queue.put((0, start_state, []))  # path starts empty
+
+    # Use a dictionary to keep track of the best time for each unique state
+    visited = dict()
+    visited[(start_state[0], start_state[1], start_state[2])] = 0
+
+    while not queue.empty():
+        current_time, current_state, path = queue.get()
+
+        if is_goal(current_state):
+            return path + [current_state]
+
+        for next_state in get_next_states(current_state):
+            next_time = next_state[3]
+            state_id = (frozenset(next_state[0]), frozenset(next_state[1]), next_state[2])
+
+            # Only proceed if we haven't visited this state or found a better path
+            if state_id not in visited or next_time < visited[state_id]:
+                visited[state_id] = next_time
+                queue.put((next_time, next_state, path + [current_state]))
+
+    return None  # No solution found
+
+    
+
 
 # Run BFS and print the full solution path
-solution = bfs()
-
+#solution = bfs()
+solution1 = ucs()
+'''
 if solution:
     print("\n=== Solution Found ===\n")
     for i, state in enumerate(solution):
@@ -118,3 +155,19 @@ if solution:
     print(f"✅ Total time to cross: {solution[-1][3]} minutes")
 else:
     print("❌ No solution found.")
+'''
+
+
+if solution1:
+    print("\n=== UCS Solution Found ===\n")
+    for i, state in enumerate(solution1):
+        DL, DR, pos, time_elapsed = state
+        print(f"Step {i}:")
+        print(f"  Left: {sorted(DL)}")
+        print(f"  Right: {sorted(DR)}")
+        print(f"  Flashlight: {pos}")
+        print(f"  Time so far: {time_elapsed} minutes\n")
+    print(f"✅ Optimal total time to cross: {solution1[-1][3]} minutes")
+else:
+    print("❌ No solution found.")
+
