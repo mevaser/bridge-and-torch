@@ -1,5 +1,7 @@
 from collections import deque
 from queue import PriorityQueue
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # Dictionary of people and their crossing times
 PEOPLE = {'P1': 1, 'P2': 2, 'P5': 5, 'P10': 10, 'P15': 15}
@@ -12,12 +14,10 @@ DL = {'P1', 'P2', 'P5', 'P10', 'P15'}  # Everyone starts on the left
 DR = set()  # Right side is initially empty
 state = (DL, DR, flashlight_position, total_time)  # Full state representation
 
-
 def is_goal(state):
     """Check if the goal state is reached: everyone has crossed to the right side."""
     DL, DR, pos, time_elapsed = state
     return DR == ALL
-
 
 def get_next_states(state):
     """Generate all legal next states from the current state."""
@@ -62,10 +62,9 @@ def get_next_states(state):
 
     return next_states
 
-
-def print_solution(path):
-    """Print the solution in a clear and concise format."""
-    print("\n=== Solution Found ===")
+def print_solution(path, title="Solution"):
+    """Print the solution path with optional title, formatted for clarity."""
+    print(f"\n=== {title} Found ===")
     total_time = path[-1][3] if path else 0
     for i in range(1, len(path)):
         prev, curr = path[i - 1], path[i]
@@ -81,7 +80,6 @@ def print_solution(path):
         step_time = time - prev_time
         print(f"Step {i}: [{move_str}] {direction} ({step_time} min)")
     print(f"\n✅ Optimal total time to cross: {total_time} minutes")
-
 
 def bfs():
     """Perform Breadth-First Search to find the shortest sequence of moves."""
@@ -103,7 +101,6 @@ def bfs():
                 queue.append((next_state, path + [current_state]))
 
     return None  # No solution found
-
 
 def ucs():
     """Perform Uniform Cost Search to find the minimum time crossing sequence."""
@@ -128,17 +125,27 @@ def ucs():
 
     return None
 
+def visualize_solution_path(solution):
+    G = nx.DiGraph()
+    for i in range(len(solution) - 1):
+        curr = f"S{i}\n{sorted(solution[i][0])} → {sorted(solution[i][1])}\n{solution[i][3]}m"
+        next = f"S{i+1}\n{sorted(solution[i+1][0])} → {sorted(solution[i+1][1])}\n{solution[i+1][3]}m"
+        step_time = solution[i+1][3] - solution[i][3]
+        G.add_edge(curr, next, label=f"{step_time}m")
+
+    pos = nx.spring_layout(G, seed=42)
+    plt.figure(figsize=(14, 8))
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1800, font_size=9, font_weight='bold', arrows=True)
+    edge_labels = nx.get_edge_attributes(G, 'label')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9)
+    plt.title("Bridge & Torch – Optimal UCS Path", fontsize=14)
+    plt.tight_layout()
+    plt.show()
 
 # === Run UCS ===
 solution1 = ucs()
 if solution1:
-    print_solution(solution1)
+    print_solution(solution1, title="UCS Solution")
+    visualize_solution_path(solution1)
 else:
     print("❌ No solution found.")
-
-# === Optional: Run BFS (if desired) ===
-# solution2 = bfs()
-# if solution2:
-#     print_solution(solution2)
-# else:
-#     print("❌ No solution found.")
