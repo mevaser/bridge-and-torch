@@ -192,13 +192,13 @@ def visualize_solution_path(solution):
     plt.show()
 
 
-# # === Run UCS ===
-# solution1 = ucs()
-# if solution1:
-#     print_solution(solution1, title="UCS Solution")
-#     visualize_solution_path(solution1)
-# else:
-#     print("❌ No solution found.")
+# #=== Run UCS ===
+solution1 = ucs()
+if solution1:
+    print_solution(solution1, title="UCS Solution")
+    visualize_solution_path(solution1)
+else:
+    print("❌ No solution found.")
 
 
 #=== Optional: Run DFS Iterative Deepening ===
