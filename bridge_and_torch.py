@@ -1,8 +1,10 @@
-# Dictionary of people and their crossing times
-PEOPLE = {'P1': 1, 'P2': 2, 'P5': 5, 'P10': 10, 'P15': 15}
+from collections import deque
 
-# Set of all people
-ALL = set(PEOPLE.keys())
+
+PEOPLE = {'P1': 1, 'P2': 2, 'P5': 5, 'P10': 10, 'P15': 15} # Dictionary of people and their crossing times
+ALL = set(PEOPLE.keys()) # Set of all people
+
+
 
 # Initial state
 flashlight_position = 'L'  # 'L' for left side, 'R' for right side
@@ -78,3 +80,41 @@ def get_next_states(state):
 
 for state in get_next_states(state):
     print(state)
+
+
+def bfs():
+    """Perform Breadth-First Search to find the shortest crossing sequence."""
+    start_state = (frozenset(ALL), frozenset(), 'L', 0)
+    queue = deque()
+    queue.append((start_state, []))  # second item is the path to this state
+
+    visited = set()
+    visited.add((start_state[0], start_state[1], start_state[2]))  # only DL, DR, and torch position
+    while queue:
+        current_state, path = queue.popleft()
+
+        if is_goal(current_state):
+            return path + [current_state]
+        for next_state in get_next_states(current_state):
+            state_id = (frozenset(next_state[0]), frozenset(next_state[1]), next_state[2])
+            if state_id not in visited:
+                visited.add(state_id)
+                queue.append((next_state, path + [current_state]))
+    return None
+
+
+# Run BFS and print the full solution path
+solution = bfs()
+
+if solution:
+    print("\n=== Solution Found ===\n")
+    for i, state in enumerate(solution):
+        DL, DR, pos, time_elapsed = state
+        print(f"Step {i}:")
+        print(f"  Left side:  {sorted(DL)}")
+        print(f"  Right side: {sorted(DR)}")
+        print(f"  Flashlight: {pos}")
+        print(f"  Time so far: {time_elapsed} minutes\n")
+    print(f"✅ Total time to cross: {solution[-1][3]} minutes")
+else:
+    print("❌ No solution found.")
