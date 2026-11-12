@@ -1,73 +1,35 @@
 from collections import deque
-from queue import PriorityQueue
-import networkx as nx
-import matplotlib.pyplot as plt
+from itertools import combinations, count
+from heapq import heappop, heappush
+import argparse
 
 # Dictionary of people and their crossing times
 PEOPLE = {'P1': 1, 'P2': 2, 'P5': 5, 'P10': 10, 'P15': 15}
 ALL = set(PEOPLE.keys())  # Set of all people
 
-# Initial state values
-flashlight_position = 'L'  # 'L' for left side, 'R' for right side
-total_time = 0  # Time taken for crossing
-DL = {'P1', 'P2', 'P5', 'P10', 'P15'}  # Everyone starts on the left
-DR = set()  # Right side is initially empty
-state = (DL, DR, flashlight_position, total_time)  # Full state representation
-
-
 def is_goal(state):
     """Check if the goal state is reached: everyone has crossed to the right side."""
-    DL, DR, pos, time_elapsed = state
-    return DR == ALL
+    return state[1] == ALL
 
 
 def get_next_states(state):
-    """Generate all legal next states from the current state."""
-    DL, DR, pos, time_elapsed = state
-    next_states = []
-
-    if pos == 'L':
-        # Move two people from left to right
-        for person_a in DL:
-            for person_b in DL:
-                if person_a != person_b:
-                    new_DL = DL - {person_a, person_b}
-                    new_DR = DR | {person_a, person_b} 
-                    crossing_time = max(PEOPLE[person_a], PEOPLE[person_b])
-                    new_state = (new_DL, new_DR, 'R', time_elapsed + crossing_time)
-                    next_states.append(new_state)
-        # Move one person from left to right
-        for person in DL:
-            new_DL = DL - {person}
-            new_DR = DR | {person}
-            crossing_time = PEOPLE[person]
-            new_state = (new_DL, new_DR, 'R', time_elapsed + crossing_time)
-            next_states.append(new_state)
-
-    else:  # pos == 'R'
-        # Move two people from right to left
-        for person_a in DR:
-            for person_b in DR:
-                if person_a != person_b:
-                    new_DL = DL | {person_a, person_b}
-                    new_DR = DR - {person_a, person_b}
-                    crossing_time = max(PEOPLE[person_a], PEOPLE[person_b])
-                    new_state = (new_DL, new_DR, 'L', time_elapsed + crossing_time)
-                    next_states.append(new_state)
-        # Move one person from right to left
-        for person in DR:
-            new_DL = DL | {person}
-            new_DR = DR - {person}
-            crossing_time = PEOPLE[person]
-            new_state = (new_DL, new_DR, 'L', time_elapsed + crossing_time)
-            next_states.append(new_state)
-
-    return next_states
+    """Generate legal one- and two-person crossings in stable order."""
+    left, right, torch, elapsed = state
+    bank = left if torch == "L" else right
+    travelers = sorted(bank, key=lambda p: (PEOPLE[p], p))
+    for size in (2, 1):
+        for group in combinations(travelers, size):
+            move = frozenset(group)
+            cost = max(PEOPLE[p] for p in move)
+            if torch == "L":
+                yield left - move, right | move, "R", elapsed + cost
+            else:
+                yield left | move, right - move, "L", elapsed + cost
 
 
-def print_solution(path, title="Solution"):
+def print_solution(path, title="Solution", *, minimum_time=False):
     """Print the solution path with optional title, formatted for clarity."""
-    print(f"\n=== {title} Found ===")
+    print(f"\n=== {title} ===")
     total_time = path[-1][3] if path else 0
 
     for i in range(1, len(path)):
@@ -76,14 +38,15 @@ def print_solution(path, title="Solution"):
         DL, DR, pos, time = curr
         if pos == 'R':
             move = prev_DL - DL
-            direction = '→ RIGHT'
+            direction = '-> RIGHT'
         else:
             move = prev_DR - DR
-            direction = '← LEFT'
+            direction = '<- LEFT'
         move_str = ', '.join(sorted(move))
         step_time = time - prev_time
         print(f"Step {i}: [{move_str}] {direction} ({step_time} min)")
-    print(f"\n✅ Optimal total time to cross: {total_time} minutes")
+    label = "Minimum crossing time" if minimum_time else "Route time"
+    print(f"\n{label}: {total_time} minutes")
 
 
 def bfs():
@@ -139,27 +102,29 @@ def dfs_iterative_deepening(max_depth=100):
     start_state = (frozenset(ALL), frozenset(), 'L', 0)
 
     for depth in range(1, max_depth + 1):
-        print(f"🔎 Trying depth limit: {depth}")
+        print(f"Trying depth limit: {depth}")
         visited = set()
         result = dfs_limited(start_state, depth, [], visited)
         if result:
-            print(f"\n✅ Solution found at depth {depth}")
+            print(f"\nSolution found at depth {depth}")
             return result
 
-    print("❌ No solution found within depth limit.")
+    print("No solution found within depth limit.")
     return None
 
 
 def ucs():
     """Perform Uniform Cost Search to find the minimum time crossing sequence."""
     start_state = (frozenset(ALL), frozenset(), 'L', 0)
-    queue = PriorityQueue()
-    queue.put((0, start_state, []))
+    order = count()
+    queue = [(0, next(order), start_state, [])]
     visited = dict()
     visited[(start_state[0], start_state[1], start_state[2])] = 0
 
-    while not queue.empty():
-        current_time, current_state, path = queue.get()
+    while queue:
+        current_time, _, current_state, path = heappop(queue)
+        if current_time != visited[current_state[:3]]:
+            continue
         if is_goal(current_state):
             return path + [current_state]
 
@@ -169,13 +134,19 @@ def ucs():
 
             if state_id not in visited or next_time < visited[state_id]:
                 visited[state_id] = next_time
-                queue.put((next_time, next_state, path + [current_state]))
+                heappush(queue, (next_time, next(order), next_state, path + [current_state]))
 
     return None  # No solution found
 
 
-def visualize_solution_path(solution):
+def visualize_solution_path(solution, title, output=None):
     """Visualize the solution path using NetworkX and Matplotlib."""
+    import networkx as nx
+    import matplotlib
+    if output:
+        matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     G = nx.DiGraph()
     for i in range(len(solution) - 1):
         curr = f"S{i}\n{sorted(solution[i][0])} → {sorted(solution[i][1])}\n{solution[i][3]}m"
@@ -188,23 +159,36 @@ def visualize_solution_path(solution):
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1800, font_size=9, font_weight='bold', arrows=True)
     edge_labels = nx.get_edge_attributes(G, 'label')
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9)
-    plt.title("Bridge & Torch – Optimal UCS Path", fontsize=14)
-    plt.show()
+    plt.title(title, fontsize=14)
+    if output:
+        plt.savefig(output, bbox_inches="tight")
+    else:
+        plt.show()
+    plt.close()
 
 
-# #=== Run UCS ===
-solution1 = ucs()
-if solution1:
-    print_solution(solution1, title="UCS Solution")
-    visualize_solution_path(solution1)
-else:
-    print("❌ No solution found.")
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Solve the five-traveler bridge and torch puzzle.")
+    parser.add_argument("--algorithm", choices=("ucs", "bfs", "iddfs"), default="ucs")
+    plot = parser.add_mutually_exclusive_group()
+    plot.add_argument("--plot", action="store_true", help="open an interactive route figure")
+    plot.add_argument("--save", metavar="PATH", help="save the route figure without opening a window")
+    args = parser.parse_args(argv)
+    search, title = {
+        "ucs": (ucs, "Uniform-cost search"),
+        "bfs": (bfs, "Breadth-first search"),
+        "iddfs": (dfs_iterative_deepening, "Iterative deepening DFS"),
+    }[args.algorithm]
+    path = search()
+    if path is None:
+        parser.exit(1, "No route found.\n")
+    print_solution(path, title, minimum_time=args.algorithm == "ucs")
+    if args.plot or args.save:
+        try:
+            visualize_solution_path(path, title, args.save)
+        except ImportError:
+            parser.exit(2, "Plotting needs the optional packages: python -m pip install -r requirements-plot.txt\n")
 
 
-#=== Optional: Run DFS Iterative Deepening ===
-solution_dfs = dfs_iterative_deepening()
-if solution_dfs:
-    print_solution(solution_dfs, title="DFS Iterative Deepening Solution")
-    visualize_solution_path(solution_dfs)
-else:
-    print("❌ No solution found.")
+if __name__ == "__main__":
+    main()

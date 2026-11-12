@@ -47,9 +47,21 @@ The optimal path is visualized as a directed graph with labeled nodes and edge w
 
 ## 🛠️ How to Run
 
-Make sure you have Python 3 installed, then:
+From this directory with Python 3, run the default deterministic minimum-time solver. It uses only the standard library and does not open a window:
 
 ```bash
-pip install matplotlib networkx
 python bridge_and_torch.py
+python bridge_and_torch.py --algorithm bfs
+python bridge_and_torch.py --algorithm iddfs
+python -m unittest -v
+```
+
+The default five crossing times give a minimum of **28 minutes**. Each output line names the travelers, direction and cost. BFS and iterative deepening search by move count; their printed total is the cost of that route, not a claim of minimum time. People with equal-cost choices are visited in a stable order.
+
+Only install the optional plotting packages if you want a figure:
+
+```bash
+python -m pip install -r requirements-plot.txt
+python bridge_and_torch.py --save route.png
+python bridge_and_torch.py --algorithm bfs --plot
 ```
